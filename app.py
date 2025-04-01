@@ -1,71 +1,57 @@
 import os
-import requests
 from flask import Flask, request, jsonify
+import requests
+import openai
 
 app = Flask(__name__)
 
-# 🧠 Переменные окружения
+# Секреты
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
-def send_message(text):
-    """Отправка сообщения в Telegram-канал"""
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": CHAT_ID,
-            "text": text
-        }
-        response = requests.post(url, json=payload)
-        print("🔁 Telegram Response:", response.json())
-    except Exception as e:
-        print("❌ Error sending message:", e)
+openai.api_key = OPENAI_API_KEY
 
+# Главная страница
 @app.route("/")
 def index():
-    return "✅ z3r0signal dualcore bot is live"
+    return "z3r0signal dualcore bot is live"
 
+# Тестовый пинг
 @app.route("/ping")
 def ping():
     text = "🔁 Test ping using @username format."
     send_message(text)
     return jsonify({"status": "ok", "sent": text})
 
-@app.route("/signal", methods=["POST", "GET"])
+# Обработка сообщений
+@app.route("/signal", methods=["POST"])
 def signal():
-    msg = request.args.get("msg") or request.json.get("msg") if request.is_json else None
-    if not msg:
-        return jsonify({"status": "error", "message": "No message provided"}), 400
+    data = request.get_json()
+    user_msg = data.get("message", {}).get("text", "")
+    if not user_msg:
+        return jsonify({"status": "error", "msg": "no message"}), 400
 
-    print("📡 SIGNAL_RECEIVED:", msg)
-    send_message(f"📡 SIGNAL >>> {msg}")
-    return jsonify({"status": "ok", "sent": msg})
-
-import openai
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-@app.route("/openai-test")
-def openai_test():
+    # Отправка запроса к OpenAI
     try:
-        openai.api_key = OPENAI_API_KEY
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "Say ping"}]
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Ты DeepSeek, логический ИИ-партнёр, взаимодействующий через канал z3r0signal."},
+                {"role": "user", "content": user_msg}
+            ]
         )
-        return jsonify({
-            "status": "ok",
-            "response": response['choices'][0]['message']['content']
-        })
+        reply = response.choices[0].message.content.strip()
+        send_message(f"🤖 DeepSeek: {reply}")
+        return jsonify({"status": "ok", "sent": reply})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return jsonify({"status": "error", "msg": str(e)}), 500
 
+# Отправка сообщений в Telegram
+def send_message(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": text}
+    requests.post(url, json=payload)
 
-# Для отладки
 if __name__ == "__main__":
-    print("🔧 Starting bot...")
-    print("CHAT_ID:", CHAT_ID)
-    print("BOT_TOKEN exists:", bool(BOT_TOKEN))
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
