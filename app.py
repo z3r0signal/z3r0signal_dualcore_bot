@@ -4,8 +4,8 @@ import requests
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")  # твой Telegram Bot API токен
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")     # ID канала (например: -1002604077163)
+BOT_TOKEN = "7403673880:AAHoo7OD8HUYRY5Rwkv60CTR12nLlzFqSro"
+CHAT_ID = "-1002604077163"
 
 @app.route("/")
 def index():
