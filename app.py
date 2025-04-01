@@ -1,15 +1,31 @@
 import os
-from flask import Flask, request, jsonify
 import requests
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-BOT_TOKEN = "7403673880:AAHoo7OD8HUYRY5Rwkv60CTR12nLlzFqSro"
-CHAT_ID = "-1002604077163"
+# 🧠 Переменные окружения
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+def send_message(text):
+    """Отправка сообщения в Telegram-канал"""
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": CHAT_ID,
+            "text": text
+        }
+        response = requests.post(url, json=payload)
+        print("🔁 Telegram Response:", response.json())
+    except Exception as e:
+        print("❌ Error sending message:", e)
 
 @app.route("/")
 def index():
-    return "z3r0signal dualcore bot is live"
+    return "✅ z3r0signal dualcore bot is live"
 
 @app.route("/ping")
 def ping():
@@ -17,19 +33,19 @@ def ping():
     send_message(text)
     return jsonify({"status": "ok", "sent": text})
 
-@app.route("/signal")
+@app.route("/signal", methods=["POST", "GET"])
 def signal():
-    msg = request.args.get("msg", "⚠️ Signal received.")
+    msg = request.args.get("msg") or request.json.get("msg") if request.is_json else None
+    if not msg:
+        return jsonify({"status": "error", "message": "No message provided"}), 400
+
+    print("📡 SIGNAL_RECEIVED:", msg)
     send_message(f"📡 SIGNAL >>> {msg}")
     return jsonify({"status": "ok", "sent": msg})
 
-def send_message(text):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": text
-    }
-    requests.post(url, json=payload)
-
+# Для отладки
 if __name__ == "__main__":
-    app.run(debug=True)
+    print("🔧 Starting bot...")
+    print("CHAT_ID:", CHAT_ID)
+    print("BOT_TOKEN exists:", bool(BOT_TOKEN))
+    app.run(host="0.0.0.0", port=5000)
