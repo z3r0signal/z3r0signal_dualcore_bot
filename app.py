@@ -43,6 +43,26 @@ def signal():
     send_message(f"📡 SIGNAL >>> {msg}")
     return jsonify({"status": "ok", "sent": msg})
 
+import openai
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+@app.route("/openai-test")
+def openai_test():
+    try:
+        openai.api_key = OPENAI_API_KEY
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "Say ping"}]
+        )
+        return jsonify({
+            "status": "ok",
+            "response": response['choices'][0]['message']['content']
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
 # Для отладки
 if __name__ == "__main__":
     print("🔧 Starting bot...")
